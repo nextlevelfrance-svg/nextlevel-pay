@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Paiement validé</title>
+  <style>
+    body{font-family:Arial;background:#0e0e0e;color:#fff;text-align:center;padding:30px}
+    button{font-size:20px;padding:16px 18px;border:0;border-radius:12px;cursor:pointer;width:100%;max-width:360px}
+    .ok{color:#7CFF9B;margin-bottom:12px}
+    .msg{color:#aaa;margin-bottom:22px}
+  </style>
+</head>
+<body>
+  <h2 class="ok">✅ Paiement confirmé</h2>
+  <p class="msg">Appuie pour recevoir tes jetons.</p>
+  <button id="btn">Recevoir mes jetons</button>
+  <p id="status" class="msg"></p>
+
+<script>
+  const params = new URLSearchParams(location.search);
+  const sessionId = params.get("session_id");
+  const btn = document.getElementById("btn");
+  const status = document.getElementById("status");
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    status.textContent = "Distribution en cours...";
+    const r = await fetch(`/api/claim?session_id=${encodeURIComponent(sessionId)}`);
+    const j = await r.json();
+    if (j.ok) status.textContent = `✅ ${j.tokens} jetons délivrés.`;
+    else status.textContent = `❌ Erreur: ${j.error}`;
+  };
+</script>
+</body>
+</html>
