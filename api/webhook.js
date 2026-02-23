@@ -9,6 +9,18 @@ async function readRawBody(req) {
   return Buffer.concat(chunks);
 }
 
+async function redisSet(key, value) {
+  const url = `${process.env.UPSTASH_REDIS_REST_URL}/set/${encodeURIComponent(key)}`;
+  await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(value)
+  });
+}
+
 export default async function handler(req, res) {
   try {
     const buf = await readRawBody(req);
@@ -21,7 +33,15 @@ export default async function handler(req, res) {
     );
 
     if (event.type === "checkout.session.completed") {
-      console.log("Paiement validé :", event.data.object.id);
+      const session = event.data.object;
+
+      if (session.payment_status === "paid") {
+        await redisSet(`paid:${session.id}`, {
+          amount_total: session.amount_total,
+          metadata: session.metadata,
+          created: session.created
+        });
+      }
     }
 
     res.json({ received: true });
