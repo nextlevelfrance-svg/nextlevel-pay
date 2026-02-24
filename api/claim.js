@@ -37,16 +37,20 @@ export default async function handler(req, res) {
     const tokens = TOKENS_BY_AMOUNT[String(amount)];
     if (!tokens) return res.status(400).json({ error: "unknown_pack" });
 
-    // Appel Home Assistant (webhook)
+    // ✅ Appel Home Assistant (webhook) + clé de sécurité si définie
+    const body = process.env.HA_WEBHOOK_KEY
+      ? { session_id, tokens, key: process.env.HA_WEBHOOK_KEY }
+      : { session_id, tokens };
+
     const ha = await fetch(process.env.HA_WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_id, tokens })
+      body: JSON.stringify(body)
     });
 
     if (!ha.ok) return res.status(502).json({ error: "ha_failed" });
 
-    await redisSet(`used:${session_id}`, { used_at: Date.now(), tokens });
+    await redisSet(`used:${session_id}`, { used_at: Date.now(), tokens, mode: "button" });
 
     res.json({ ok: true, tokens });
   } catch (e) {
